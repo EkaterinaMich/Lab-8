@@ -1,0 +1,20 @@
+import cv2
+import numpy as np
+
+img = cv2.imread('images/variant-4.jpeg') 
+
+if img is None:
+    print("Ошибка: не удалось загрузить изображение. Проверь путь к файлу.")
+else:
+    blue_channel_img = img.copy()
+
+    blue_channel_img[:, :, 1] = 0  # Убираем зеленый канал
+    blue_channel_img[:, :, 2] = 0  # Убираем красный канал
+
+    cv2.imshow('Original Image', img)
+    cv2.imshow('Only Blue Channel', blue_channel_img)
+
+    cv2.waitKey(0)
+    cv2.destroyAllWindows()
+
+    

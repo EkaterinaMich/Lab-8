@@ -1,0 +1,81 @@
+import cv2
+import numpy as np
+
+def find_marker(frame):
+    gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY) #чб
+    
+    gray = cv2.GaussianBlur(gray, (5, 5), 0) #размываем
+    
+    thresh = cv2.adaptiveThreshold(gray, 255,
+                                   cv2.ADAPTIVE_THRESH_GAUSSIAN_C,
+                                   cv2.THRESH_BINARY_INV, 11, 2) 
+    
+    contours, hierarchy = cv2.findContours(thresh,
+                                           cv2.RETR_EXTERNAL,
+                                           cv2.CHAIN_APPROX_NONE) #ищем контуры
+    
+    marker_box = None
+    marker_center = None
+    
+    if len(contours) > 0: #ищем контур
+        c = max(contours, key=cv2.contourArea)
+        area = cv2.contourArea(c)
+        
+        if area > 500:
+            x, y, w, h = cv2.boundingRect(c)
+            
+            perimeter = cv2.arcLength(c, True)
+            if perimeter > 0:
+                circularity = 4 * np.pi * area / (perimeter * perimeter)
+                
+                if circularity > 0.6:
+                    marker_box = (x, y, w, h)
+                    center_x = x + w // 2
+                    center_y = y + h // 2
+                    marker_center = (center_x, center_y)
+    
+    return marker_box, marker_center, thresh
+
+def video_processing():
+    cap = cv2.VideoCapture(0)
+    
+    down_points = (640, 480)
+    i = 0
+    
+    while True:
+        ret, frame = cap.read()
+        if not ret:
+            print("Ошибка: не удалось получить кадр")
+            break
+        
+        frame = cv2.resize(frame, down_points, interpolation=cv2.INTER_LINEAR)
+        
+        height, width = frame.shape[:2]
+        
+        middle_x = width // 2
+        cv2.line(frame, (middle_x, 0), (middle_x, height), (255, 0, 0), 2)  # синяя линия
+        
+        marker_box, marker_center, thresh = find_marker(frame)
+        
+        if marker_box is not None:
+            x, y, w, h = marker_box
+            
+            if marker_center[0] > middle_x: #проверка половины
+                cv2.rectangle(frame, (x, y), (x + w, y + h), (0, 255, 0), 3)
+            else:
+                cv2.rectangle(frame, (x, y), (x + w, y + h), (0, 255, 255), 3)
+            
+            cv2.circle(frame, marker_center, 5, (0, 0, 255), -1)#рисуем метку
+            
+        
+        cv2.imshow('tag search', frame)
+        
+        if cv2.waitKey(1) & 0xFF == 27:
+            break
+        
+        i += 1
+    
+    cap.release()
+
+if __name__ == '__main__':
+    video_processing()
